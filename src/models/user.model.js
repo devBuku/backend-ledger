@@ -28,16 +28,19 @@ const userSchema = new mongoose.Schema(
     { timestamps: true },
 );
 
-userSchema.pre("save", async function (next) {
+userSchema.pre("save", async function () {
     try {
         if (!this.isModified("password")) {
-            return next();
+            return;
         }
-        const hash = await bcrypt.hash(this.password, Number(process.env.SALT));
+        const hash = await bcrypt.hash(
+            this.password,
+            Number(process.env.SALT_ROUND),
+        );
         this.password = hash;
-        next();
+        return;
     } catch (error) {
-        next(error);
+        console.log(`Error in User Model hashing password: ${error}`);
     }
 });
 

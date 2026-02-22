@@ -1,5 +1,5 @@
 const User = require("../models/user.model");
-const generateToken = require("../lib/utils");
+const utils = require("../lib/utils");
 
 /**
 - user register controller
@@ -31,7 +31,7 @@ async function registerUserController(req, res) {
 
         if (newUser) {
             await newUser.save();
-            generateToken(newUser._id, res);
+            utils.generateToken(newUser._id, res);
             res.status(201).json({
                 user: {
                     _id: newUser._id,
@@ -45,7 +45,45 @@ async function registerUserController(req, res) {
                 .status(400)
                 .json({ message: `Invalid user data`, success: false });
         }
-    } catch (error) {}
+    } catch (error) {
+        console.log(`Error in Authentication Controller: ${error}`);
+        return res.status(500).json({ message: `Internal Server Error` });
+    }
 }
 
-module.exports = { registerUserController };
+/**
+- user login controller
+- POST /api/v1/auth/login
+*/
+
+async function loginUserController(req, res) {
+    try {
+        const { email, password } = req.body;
+        const user = await User.findOne({ email }).select("+password");
+        if (!user) {
+            return res
+                .status(401)
+                .json({ message: `Invalid email or password` });
+        }
+        const isValidPassword = user.comparePassword(password);
+        if (!isValidPassword) {
+            return res
+                .status(401)
+                .json({ message: `Invalid email or password` });
+        }
+        utils.generateToken(user._id, res);
+        res.status(200).json({
+            message: `User logged in successfully`,
+            user: {
+                _id: user._id,
+                email: user.email,
+                name: user.name,
+            },
+        });
+    } catch (error) {
+        console.log(`Error in Login User Controller: ${error}`);
+        res.status(500).json({ message: `Internal Server Error` });
+    }
+}
+
+module.exports = { registerUserController, loginUserController };
